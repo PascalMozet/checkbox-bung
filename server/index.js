@@ -1,40 +1,32 @@
-import { connect } from "http2";
-import WebSocket, { WebSocketServer } from "ws";
-const http = require('http')
-const url = require('url')
+import cors from "cors";
+import express from "express";
+import { createServer } from "http";
+import { Server } from "socket.io";
 
-const server = http.createServer()
-const wsServer = new WebSocketServer({ server })
+const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {});
 
-const port = 8000
-const connections = {}
-const users = {}
+app.use(cors({ origin: ["*", "http://localhost:3000"] }));
+app.use(express.static("../client/dist"));
 
-const handleMessage = (bytes, uuid) => {
-  const message = JSON.parse(bytes.toString())
-  console.log(`${username} connected`)
-  const user = user[uuid]
-  user.state = message
-  broadcast()
-  console.log(`${user.username} updated status: ${JSON.stringify(user.state)}`)
+const checkboxes = [];
+
+for (let y = 0; y < 20; y++) {
+  if (!checkboxes[y]) checkboxes[y] = [];
+  for (let x = 0; x < 20; x++) {
+    checkboxes[y][x] = false;
+  }
 }
 
-const handleClose = uuid => {
-  console.log(`${users[uuid].username} disconnected`)
-  delete connections[uuid]
-  delete users[uuid]
-}
+io.on("connection", (socket) => {
+  socket.emit("init", checkboxes);
+  socket.on("update", (barcelona) => {
+    checkboxes[barcelona.y][barcelona.x] = barcelona.value;
+    io.emit("update", barcelona);
+  });
+});
 
-const broadcast = () => {
-  Object
-    .keys(connections)
-    .forEach(uuid => {
-      const connection = connections[uuid]
-      const message = JSON.stringify(users)
-      connection.send(message)
-    })
-}
-
-wsServer.on("connection", (ws) => {
-  console.log("a new client connected");
+httpServer.listen(3000, () => {
+  console.log("open on 3000");
 });
